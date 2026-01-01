@@ -1,0 +1,49 @@
+# Paths
+# D:\skrivebord1\programma\__Makefile_Tutorial__\SDL3-3.2.26\x86_64-w64-mingw32\include\SDL3\SDL.h
+# ---------- SDL3
+# path_to_SDL3 := ../SDL3-3.2.26
+# path_to_64SDL3 := $(path_to_SDL3)/x86_64-w64-mingw32
+# SDL3_dll := $(path_to_64SDL3)/bin/SDL3.dll
+# include_dir := $(path_to_64SDL3)/include
+# lib_dir := $(path_to_64SDL3)/lib
+# ---------- ENV variable
+#path_to_64SDL2 := $(W64DEVKIT_HOME)
+
+path_to_64SDL2 := .
+include_dir := $(path_to_64SDL2)/include
+lib_dir := $(path_to_64SDL2)/lib
+
+# Directories
+src_dir := src
+obj_dir := bin/obj
+bin_dir := bin
+
+# Files
+sources := $(wildcard $(src_dir)/*.c)
+objects := $(patsubst $(src_dir)/%.c,$(obj_dir)/%.o,$(sources))
+output := $(bin_dir)/OUT.exe
+
+# Compiler and flags
+CXX := gcc
+CXXFLAGS := -I$(include_dir) -w -O0
+LDFLAGS := -L$(lib_dir) -lmingw32 -lSDL2main -lSDL2 -lSDL2_mixer -lSDL2_ttf
+
+# Default target
+all: $(output)
+
+# Link step
+$(output): $(objects)
+	$(CXX) $(objects) -o $@ $(LDFLAGS)
+
+# Compile step
+$(obj_dir)/%.o: $(src_dir)/%.c
+	@mkdir -p $(obj_dir)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Optional: copy SDL3.dll
+# $(bin_dir)/SDL3.dll:
+# 	copy $(SDL3_dll) $(bin_dir)/
+
+# Clean
+clean:
+	rm -rf $(wildcard $(obj_dir)/*.o) $(output)

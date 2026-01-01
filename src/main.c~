@@ -1,0 +1,499 @@
+#include <stdio.h>
+#include <SDL2/SDL.h>
+
+//-#- macros
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
+
+#define TRUE 1
+#define FALSE 0
+
+//-#- standard datatypes
+typedef char int8;
+typedef unsigned char uint8;
+typedef unsigned char bool;
+
+//-#- readme naming conventions comments
+/*
+ * Naming convention
+ *
+ *
+ * prefix_nameOfVariable223 
+ *
+ * NameOfType_suffix
+ *
+ * ( short scope, iterators etc. )
+ * _p, _x
+ */
+
+//-#- structs unions classes
+typedef struct
+{
+  bool gameIsRunning;
+} GeneralGameData;
+
+typedef struct
+{
+  float x;
+  float y;
+} Point2D;
+
+typedef struct
+{
+  float x;
+  float y;
+  float z;
+} Point3D;
+
+typedef struct
+{
+  unsigned int x;
+  unsigned int y;
+  unsigned int width;
+  unsigned int height;
+} Rect;
+
+typedef struct
+{
+  uint8 r;
+  uint8 g;
+  uint8 b;
+} Color;
+
+typedef struct
+{
+  unsigned int length;
+  Point3D* array;
+} Point3DArray;
+
+Point3D p3d_at( Point3DArray array, unsigned int index )
+{
+  if ( index < array.length )
+  {
+    return array.array[index];
+  }
+  printf( "Point3D p3d_at( Point3DArray array, unsigned int index )\n" );
+  printf( "out of bounds\n" );
+  Point3D nullPoint = {0, 0, 0};
+  return nullPoint;
+}
+
+#define MAX_VERTICES_PER_FACE 3
+typedef struct
+{
+  unsigned int* array;
+} Face;
+
+typedef struct
+{
+  unsigned int length;
+  Face* array;
+} FaceArray;
+
+typedef struct
+{
+  Point3DArray vertices; // array of point3D
+  FaceArray faces; // array of arrays of 3 uint32
+  Color color; // color
+} Model;
+
+Point3D model_getVertex(
+    Model model,
+    unsigned int faceIndex,
+    unsigned int vertexIndex 
+    )
+{
+  if ( faceIndex >= model.faces.length )
+  {
+    printf( " faceIndex >= model.faces.length \n" );
+    Point3D nullPoint = {0, 0, 0};
+    return nullPoint;
+  }
+  if ( vertexIndex >= MAX_VERTICES_PER_FACE )
+  {
+    printf( " vertexIndex >= model.faces.length \n" );
+    Point3D nullPoint = {0, 0, 0};
+    return nullPoint;
+  }
+  const unsigned int indexVertices = model.faces.array[faceIndex].array[vertexIndex];
+
+  if ( indexVertices >= model.vertices.length )
+  {
+    printf( " indexVertices >= model.vertices \n" );
+    Point3D nullPoint = {0, 0, 0};
+    return nullPoint;
+  }
+  return model.vertices.array[indexVertices];
+}
+
+
+//-#- functions
+void default_clearScreen( const SDL_Renderer* renderer )
+{
+    /* Clear screen to black */
+    SDL_SetRenderDrawColor( renderer, 0, 0, 0, 255 );
+    SDL_RenderClear( renderer );
+}
+
+GeneralGameData handleSdlEvent( GeneralGameData genData, const SDL_Event* event )
+{
+  if( event->type == SDL_QUIT )
+  {
+    genData.gameIsRunning = FALSE;
+  }
+  return genData;
+}
+
+Point2D transform_spaceToScreen( const Point3D pnt )
+{
+  // projection
+  Point2D transformedPoint;
+  if ( pnt.z != 0 )
+  {
+    transformedPoint.x = pnt.x / pnt.z;
+    transformedPoint.y = pnt.y / pnt.z;
+  } else {
+    printf( "pnt.z == 0" );
+    transformedPoint.x = -9999;
+    transformedPoint.y = -9999;
+  }
+
+  // to screen coords
+  transformedPoint.x += 1;
+  transformedPoint.y += 1;
+  transformedPoint.x *= SCREEN_WIDTH * 0.5;
+  transformedPoint.y *= SCREEN_HEIGHT * 0.5;
+  return transformedPoint;
+}
+
+bool pointIsInsideRect( const Rect viewRect, const Point2D pnt )
+{
+
+  if ( pnt.x > viewRect.x && pnt.x < viewRect.x + viewRect.width )
+  {
+    if ( pnt.y > viewRect.y && pnt.y < viewRect.y + viewRect.height )
+    {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+bool drawPoint2D_screen( const SDL_Renderer* renderer, const Rect viewRect, const Point2D pnt, const Color color )
+{
+  const int size = 5;
+  const int offset = -( size >> 1 );
+  SDL_Rect rect = {0, 0, size, size};
+  if ( pointIsInsideRect(viewRect, pnt) )
+  {
+    rect.x = pnt.x + offset;
+    rect.y = pnt.y + offset;
+
+    SDL_SetRenderDrawColor( renderer, color.r, color.g, color.b, 255);
+    // SDL_SetRenderDrawColor( renderer, 255, 0, 0, 255 );
+    SDL_RenderFillRect( renderer, &rect );
+    // printf( "x: %d\n", rect.x );
+    // printf( "y: %d\n", rect.y );
+    // printf( "w: %d\n", rect.w );
+    // printf( "h: %d\n", rect.h );
+    return TRUE;
+  }
+  return FALSE;
+}
+
+bool drawLine2D_screen( 
+    const SDL_Renderer* renderer, 
+    const Rect viewRect, 
+    const Point2D pnt1, 
+    const Point2D pnt2, 
+    const Color color 
+    )
+{
+  bool pnt1_isVisible =  pointIsInsideRect( viewRect, pnt1 ) ;
+  bool pnt2_isVisible =  pointIsInsideRect( viewRect, pnt2 ) ;
+  if ( pnt1_isVisible || pnt2_isVisible)
+  {
+    SDL_SetRenderDrawColor( renderer, color.r, color.g, color.b, 255);
+    // SDL_SetRenderDrawColor( renderer, 255, 0, 0, 255 );
+    SDL_RenderDrawLine( renderer, pnt1.x, pnt1.y, pnt2.x, pnt2.y);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+bool drawFace_screen( 
+    const SDL_Renderer* renderer, 
+    const Rect viewRect, 
+    const Model model,
+    const unsigned faceIndex
+    )
+{
+  for ( int vertexIndex = 0; vertexIndex < MAX_VERTICES_PER_FACE; vertexIndex++ ) 
+  {
+    Point2D projected_3DPoint = transform_spaceToScreen(model_getVertex(
+        model,
+        faceIndex,
+        vertexIndex
+        ));
+    drawPoint2D_screen( renderer, viewRect, projected_3DPoint, model.color );
+  }
+  Point2D projected_3DPoint1 = transform_spaceToScreen(model_getVertex(
+      model,
+      faceIndex,
+      0
+      ));
+  Point2D projected_3DPoint2 = transform_spaceToScreen(model_getVertex(
+      model,
+      faceIndex,
+      1
+      ));
+  Point2D projected_3DPoint3 = transform_spaceToScreen(model_getVertex(
+      model,
+      faceIndex,
+      2
+      ));
+  drawLine2D_screen( renderer, viewRect, projected_3DPoint1, projected_3DPoint2, model.color );
+  drawLine2D_screen( renderer, viewRect, projected_3DPoint2, projected_3DPoint3, model.color );
+  drawLine2D_screen( renderer, viewRect, projected_3DPoint3, projected_3DPoint1, model.color );
+  return TRUE;
+}
+
+
+
+// -#- globalVariables
+Model model1;
+// vertices
+Point3DArray vertices1;
+// faces
+FaceArray faces1;
+// color
+Color color1 = {255, 0, 0};
+
+
+
+
+void draw( SDL_Renderer* renderer ) 
+{
+  default_clearScreen( renderer );
+  static const Rect exampleViewRect = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
+  static const Point2D examplePoint2D = { 50, 50 };
+  static const Color exampleColor = { 255, 0, 0 };
+  // drawPoint2D_screen( renderer, exampleViewRect, examplePoint2D, exampleColor );
+
+  static const Point3D examplePoint3D = { -0.5f, -0.5f, -2.0f };
+  Point2D projected_examplePoint3D = transform_spaceToScreen( examplePoint3D );
+  // drawPoint2D_screen( renderer, exampleViewRect, projected_examplePoint3D, exampleColor );
+
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      0
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      1
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      2
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      3
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      4
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      5
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      6
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      7
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      8
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      9
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      10
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      11
+      );
+  drawFace_screen( 
+      renderer, 
+      exampleViewRect, 
+      model1,
+      12
+      );
+
+  // SDL_Delay( 10 );
+
+  // update visible frame
+  SDL_RenderPresent( renderer );
+}
+
+void update(  ) 
+{
+
+}
+
+int main( int argc, char *argv[] )
+{
+  // global variables
+  //
+  //
+
+  vertices1.length = 8;
+  // front
+  // bottom
+  Point3D p1 = { 0.2, -0.4, 1.0 };
+  // ----right
+  Point3D p2 = { 0.6, -0.4, 1.0 };
+  // top
+  Point3D p3 = { 0.2, 0.4, 1.0 };
+  // ----right
+  Point3D p4 = { 0.6, 0.4, 1.0 };
+
+  // back
+  // bottom
+  Point3D p5 = { 0.2, -0.4, 1.4 };
+  // ----right
+  Point3D p6 = { 0.6, -0.4, 1.4 };
+  // top
+  Point3D p7 = { 0.2, 0.4, 1.4 };
+  // ----right
+  Point3D p8 = { 0.6, 0.4, 1.4 };
+  Point3D vArray[8] = { p1, p2, p3, p4, p5, p6, p7, p8 };
+  vertices1.array = vArray;
+
+  faces1.length = 12;
+
+  Face face1; unsigned int fArray1[3] = { 0, 1, 2 }; face1.array = fArray1;
+
+  Face face2; unsigned int fArray2[3] = { 3, 2, 1 }; face2.array = fArray2;
+
+  Face face3; unsigned int fArray3[3] = { 0, 1, 4 }; face3.array = fArray3;
+
+  Face face4; unsigned int fArray4[3] = { 2, 4, 6 }; face4.array = fArray4;
+
+  Face face5; unsigned int fArray5[3] = { 1, 4, 5 }; face5.array = fArray5;
+
+  Face face6; unsigned int fArray6[3] = { 2, 3, 6 }; face6.array = fArray6;
+
+  Face face7; unsigned int fArray7[3] = { 6, 7, 3 }; face7.array = fArray7;
+
+  Face face8; unsigned int fArray8[3] = { 4, 5, 6 }; face8.array = fArray8;
+
+  Face face9; unsigned int fArray9[3] = { 6, 7, 5 }; face9.array = fArray9;
+
+  Face face10; unsigned int fArray10[3] = { 1, 5, 7 }; face10.array = fArray10;
+
+  Face face11; unsigned int fArray11[3] = { 3, 5, 7 }; face11.array = fArray11;
+
+  Face face12; unsigned int fArray12[3] = { 0, 2, 4 }; face12.array = fArray12;
+
+  Face fsArray[12] = { face1, face2, face3, face4, face5, face6, face7, face8, face9, face10, face11, face12 };
+  faces1.array = fsArray;
+
+  // updating model
+  model1.faces = faces1;
+  model1.vertices = vertices1;
+  model1.color = color1;
+
+  SDL_Window* window = NULL;
+  SDL_Renderer* renderer = NULL;
+  GeneralGameData genData = {};
+  genData.gameIsRunning = TRUE;
+  
+  if (SDL_Init( SDL_INIT_VIDEO ) != 0)
+  {
+      SDL_Log( "SDL_Init Error: %s", SDL_GetError(  ) );
+      return 1;
+  }
+
+  window = SDL_CreateWindow(
+      "3D rendering",
+      SDL_WINDOWPOS_CENTERED,
+      SDL_WINDOWPOS_CENTERED,
+      SCREEN_WIDTH,
+      SCREEN_HEIGHT,
+      SDL_WINDOW_SHOWN
+  );
+
+  if ( !window )
+  {
+      SDL_Log( "SDL_CreateWindow Error: %s", SDL_GetError(  ) );
+      SDL_Quit(  );
+      return 1;
+  }
+
+  renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED );
+  if ( !renderer )
+  {
+      SDL_Log( "SDL_CreateRenderer Error: %s", SDL_GetError(  ) );
+      SDL_DestroyWindow( window );
+      SDL_Quit(  );
+      return 1;
+  }
+
+  // first clear
+  default_clearScreen( renderer );
+
+  // -#- main loop while running
+  while ( genData.gameIsRunning )
+  {
+      SDL_Event event;
+      while ( SDL_PollEvent( &event ) )
+      {  // poll until all events are handled!
+          GeneralGameData result_genData = handleSdlEvent(  genData, &event );
+          genData = result_genData;
+      }
+
+      // update game state, draw the current frame
+      update(  );
+      draw( renderer );
+  }
+
+  SDL_DestroyRenderer( renderer );
+  SDL_DestroyWindow( window );
+  SDL_Quit(  );
+
+  return 0;
+}
