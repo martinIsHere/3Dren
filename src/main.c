@@ -868,19 +868,18 @@ void handleKeyboardUpInput(const SDL_Event* event) {
   }
 }
 
-void handleMouseMotion(const SDL_Event* event, SDL_Window* window) {
-  static int _x1, _y1;
-  SDL_GetMouseState(&_x1, &_y1);
-  mouse_global.pos.x = (float)_x1;
-  mouse_global.pos.y = (float)_y1;
+void handleMouseMotion(const SDL_Event* event) {
+  if (!mouse_global.mb3) {
+    static int _x1, _y1;
+    SDL_GetMouseState(&_x1, &_y1);
+    mouse_global.pos.x = (float)_x1;
+    mouse_global.pos.y = (float)_y1;
+  } else {
+    mouse_global.pos = mouse_global.prevPos;
+  }
 
   mouse_global.deltaPos.x = (float)event->motion.xrel;
   mouse_global.deltaPos.y = (float)event->motion.yrel;
-
-  if (mouse_global.mb3) {
-    SDL_WarpMouseGlobal(mouse_global.prevPos.x, mouse_global.prevPos.y);
-  }
-  mouse_global.prevPos = mouse_global.pos;
 }
 
 void handleMouseInputDown(const SDL_Event* event) {
@@ -889,15 +888,18 @@ void handleMouseInputDown(const SDL_Event* event) {
     mouse_global.mb3 = TRUE;
     SDL_ShowCursor(SDL_DISABLE);
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    mouse_global.prevPos = mouse_global.pos;
   }
 }
 
-void handleMouseInputUp(const SDL_Event* event) {
+void handleMouseInputUp(const SDL_Event* event, SDL_Window* window) {
   // TODO
   if (event->button.button == SDL_BUTTON_RIGHT) {
     mouse_global.mb3 = FALSE;
     SDL_ShowCursor(SDL_ENABLE);
     SDL_SetRelativeMouseMode(SDL_FALSE);
+    SDL_WarpMouseInWindow(window, mouse_global.prevPos.x,
+                          mouse_global.prevPos.y);
   }
 }
 
@@ -917,13 +919,13 @@ GeneralGameData handleSDLEvent(GeneralGameData genData,
       handleKeyboardUpInput(event);
       break;
     case SDL_MOUSEMOTION:
-      handleMouseMotion(event, genData.window);
+      handleMouseMotion(event);
       break;
     case SDL_MOUSEBUTTONDOWN:
       handleMouseInputDown(event);
       break;
     case SDL_MOUSEBUTTONUP:
-      handleMouseInputUp(event);
+      handleMouseInputUp(event, genData.window);
       break;
   }
 
