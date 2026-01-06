@@ -32,8 +32,8 @@ const float TICKS_PER_FRAME = 1000.0f / FPS;
 #define DEBUG_FILE TRUE
 
 #define MAX_VERTICES_PER_FACE 50
-#define MAX_FACES_PER_MODEL 400000
-#define MAX_VERTICES_PER_MODEL 400000
+#define MAX_FACES_PER_MODEL 40000
+#define MAX_VERTICES_PER_MODEL 40000
 
 //-#- standard datatypes
 typedef char Int8;
@@ -743,7 +743,7 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
     fSkipRestOfLine(file);
     fRes = fGetWord(file, sBuf);
   }
-  printf("Finished parsing file");
+  printf("Finished parsing file\n");
   vertices.length = vIndex;
   faces.length = fIndex;
 
@@ -1159,9 +1159,8 @@ void draw(SDL_Renderer* renderer) {
   }
 
   // DRAW OBJECT
-  // drawObject_screen(renderer, exampleViewRect, &object3_global,
-  // camera_global);
   drawObject_screen(renderer, exampleViewRect, &object2_global, camera_global);
+  drawObject_screen(renderer, exampleViewRect, &object3_global, camera_global);
 
   // update visible frame
   SDL_RenderPresent(renderer);
