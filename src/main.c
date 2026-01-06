@@ -684,6 +684,7 @@ FResult fGetObjFaceValue(FILE* file, Face* face) {
 //-#- .obj file loading
 Bool loadObjFile(const char* path, Model* model, const float scale,
                  const Rotation rot) {
+  printf("Loading object: %s\n", path);
   // File pointer to store the
   // value returned by fopen
   FILE* file;
@@ -700,6 +701,7 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
 
   Matrix3x3 rotMatrix = generateRotM3x3all(rot.pitch, rot.yaw, rot.roll);
 
+  printf("Allocating temporary memory\n");
   char sBuf[F_BUFFER_SIZE];
   // vertices
   Vec3Array vertices;
@@ -713,11 +715,13 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
   // Face facesArray[MAX_FACES_PER_MODEL] = {};
   Uint fIndex = 0;
   FResult fRes = fGetWord(file, sBuf);
+  printf("Parsing file\n");
   while (fRes != F_EOF) {
     // buf will contain the first non-space characters leading
     // up to a space-character. Maximum F_BUFFER_SIZE characters.
     // If the maximum number of characters is reached
     if (fRes == F_EOL) {  // next line
+      printf("eol\n");
       fSkipRestOfLine(file);
       fRes = fGetWord(file, sBuf);
       continue;
@@ -730,19 +734,16 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
         verticesArray[vIndex] = multM3x3V3(rotMatrix, verticesArray[vIndex]);
         vIndex++;
       }
-      fSkipRestOfLine(file);
     } else if (strcmp(sBuf, "f") == 0) {  // first word is "f"
       if (fIndex < MAX_FACES_PER_MODEL) {
         fGetObjFaceValue(file, &facesArray[fIndex]);
         fIndex++;
       }
-      fSkipRestOfLine(file);
-    } else {
-      fSkipRestOfLine(file);
     }
-
+    fSkipRestOfLine(file);
     fRes = fGetWord(file, sBuf);
   }
+  printf("Finished parsing file");
   vertices.length = vIndex;
   faces.length = fIndex;
 
@@ -1376,11 +1377,11 @@ void initGlobals() {
   Rotation initialOrientation3 = {0.0f, M_PI, 0.0f};
   float initialScalar2 = 5.0f;
   float initialScalar3 = 0.25f;
-  // loadObjFile(MAIN_DIR_PATH
-  //             "/bin/res/models/Madara Uchiha/obj/Madara_Uchiha.obj",
-  //             &model2_global, initialScalar2, initialOrientation2);
-  loadObjFile(MAIN_DIR_PATH "/bin/res/models/test2.obj", &model2_global,
-              initialScalar2, initialOrientation2);
+  loadObjFile(MAIN_DIR_PATH
+              "/bin/res/models/Madara Uchiha/obj/Madara_Uchiha.obj",
+              &model2_global, initialScalar2, initialOrientation2);
+  // loadObjFile(MAIN_DIR_PATH "/bin/res/models/test2.obj", &model2_global,
+  //             initialScalar2, initialOrientation2);
   loadObjFile(MAIN_DIR_PATH "/bin/res/models/test.obj", &model3_global,
               initialScalar3, initialOrientation3);
   // printf("\nvertsLen: %d\n", model2_global.vertices.length);
