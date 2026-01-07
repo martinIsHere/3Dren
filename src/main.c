@@ -32,8 +32,8 @@ const float TICKS_PER_FRAME = 1000.0f / FPS;
 #define DEBUG_FILE TRUE
 
 #define MAX_VERTICES_PER_FACE 50
-#define MAX_FACES_PER_MODEL 400000
-#define MAX_VERTICES_PER_MODEL 4000000
+#define MAX_FACES_PER_MODEL 40000
+#define MAX_VERTICES_PER_MODEL 400000
 
 //-#- standard datatypes
 typedef char Int8;
@@ -667,6 +667,12 @@ FResult fGetObjFaceValue(FILE* file, Face* face) {
   FResult fRes = F_SUCCESS;
   Uint* array = (Uint*)malloc(sizeof(Uint) * MAX_FACES_PER_MODEL);
   // Uint array[MAX_FACES_PER_MODEL] = {};
+  if (array == NULL) {
+    printf(
+        "Unable to allocate space for Uint* array = (Uint*)malloc(sizeof(Uint) "
+        "* MAX_FACES_PER_MODEL);\n");
+    return F_FAILURE;
+  }
 
   while (fRes == F_SUCCESS && index < MAX_VERTICES_PER_FACE) {
     fRes = fGetInt(file, &nBuf);
@@ -738,13 +744,13 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
         fGetVertexCoord(file, &verticesArray[vIndex]);
         verticesArray[vIndex] = scaleV3(scale, verticesArray[vIndex]);
         verticesArray[vIndex] = multM3x3V3(rotMatrix, verticesArray[vIndex]);
-        printf("vIndex = %d\n", vIndex);
+        // printf("vIndex = %d\n", vIndex);
         vIndex++;
       }
     } else if (strcmp(sBuf, "f") == 0) {  // first word is "f"
       if (fIndex < MAX_FACES_PER_MODEL) {
         fGetObjFaceValue(file, &facesArray[fIndex]);
-        printf("fIndex = %d\n", fIndex);
+        // printf("fIndex = %d\n", fIndex);
         fIndex++;
       }
     }
@@ -1044,6 +1050,13 @@ FaceArray splitFaceIntoTris(const Face face) {
   out_faceBuf.length = tris;
   out_faceBuf.array = (Face*)malloc(sizeof(Face) * out_faceBuf.length);
 
+  if (out_faceBuf.array == NULL) {
+    printf(
+        "Unable to allocate space for out_faceBuf.array = "
+        "(Face*)malloc(sizeof(Face) * out_faceBuf.length);\n");
+    return out_faceBuf;
+  }
+
   out_faceBuf.length = tris;
   Uint* _array;
   for (int i = 0; i < tris; i++) {
@@ -1055,6 +1068,10 @@ FaceArray splitFaceIntoTris(const Face face) {
       // printf("index: %d\n", index);
       // printf("faceValue: %d\n", face.array[index]);
       _array = (Uint*)malloc(sizeof(Uint) * 3);
+      if (_array == NULL) {
+        printf(" _array = (Uint*)malloc(sizeof(Uint) * 3);\n");
+        return out_faceBuf;
+      }
       _array[j] = face.array[index];
     }
     out_faceBuf.array[i].array = _array;
@@ -1112,8 +1129,8 @@ Bool drawFace_screen(const SDL_Renderer* renderer, const Rect viewRect,
       // verticesBuf[i * 3 + j].color.r = 255 * i / amountOfVertices - 1;
       // verticesBuf[i * 3 + j].color.g = 255 * v_p.x / SCREEN_WIDTH;
       // verticesBuf[i * 3 + j].color.b = 255 / (i + 1);
-      verticesBuf[i * 3 + j].color.r = 255;
-      verticesBuf[i * 3 + j].color.g = 255 * faceIndex / model->faces.length;
+      verticesBuf[i * 3 + j].color.r = 255 * faceIndex / model->faces.length;
+      verticesBuf[i * 3 + j].color.g = 255;
       verticesBuf[i * 3 + j].color.b = 255 * faceIndex / model->faces.length;
       verticesBuf[i * 3 + j].color.a = 255;
     }
