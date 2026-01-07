@@ -32,8 +32,8 @@ const float TICKS_PER_FRAME = 1000.0f / FPS;
 #define DEBUG_FILE TRUE
 
 #define MAX_VERTICES_PER_FACE 50
-#define MAX_FACES_PER_MODEL 40000
-#define MAX_VERTICES_PER_MODEL 40000
+#define MAX_FACES_PER_MODEL 400000
+#define MAX_VERTICES_PER_MODEL 4000000
 
 //-#- standard datatypes
 typedef char Int8;
@@ -710,7 +710,6 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
     printf("Failed to allocate space for vertices\n");
     return FALSE;
   }
-  // Vec3 verticesArray[MAX_VERTICES_PER_MODEL] = {};  // may be scoped
   Uint vIndex = 0;
 
   // faces
@@ -720,7 +719,6 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
     printf("Failed to allocate space for faces\n");
     return FALSE;
   }
-  // Face facesArray[MAX_FACES_PER_MODEL] = {};
   Uint fIndex = 0;
   FResult fRes = fGetWord(file, sBuf);
   printf("Parsing file\n");
@@ -740,11 +738,13 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
         fGetVertexCoord(file, &verticesArray[vIndex]);
         verticesArray[vIndex] = scaleV3(scale, verticesArray[vIndex]);
         verticesArray[vIndex] = multM3x3V3(rotMatrix, verticesArray[vIndex]);
+        printf("vIndex = %d\n", vIndex);
         vIndex++;
       }
     } else if (strcmp(sBuf, "f") == 0) {  // first word is "f"
       if (fIndex < MAX_FACES_PER_MODEL) {
         fGetObjFaceValue(file, &facesArray[fIndex]);
+        printf("fIndex = %d\n", fIndex);
         fIndex++;
       }
     }
