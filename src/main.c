@@ -706,12 +706,20 @@ Bool loadObjFile(const char* path, Model* model, const float scale,
   // vertices
   Vec3Array vertices;
   Vec3* verticesArray = (Vec3*)malloc(sizeof(Vec3) * MAX_VERTICES_PER_MODEL);
+  if (verticesArray == (Vec3*)NULL) {
+    printf("Failed to allocate space for vertices\n");
+    return FALSE;
+  }
   // Vec3 verticesArray[MAX_VERTICES_PER_MODEL] = {};  // may be scoped
   Uint vIndex = 0;
 
   // faces
   FaceArray faces;
   Face* facesArray = (Face*)malloc(sizeof(Face) * MAX_FACES_PER_MODEL);
+  if (facesArray == (Face*)NULL) {
+    printf("Failed to allocate space for faces\n");
+    return FALSE;
+  }
   // Face facesArray[MAX_FACES_PER_MODEL] = {};
   Uint fIndex = 0;
   FResult fRes = fGetWord(file, sBuf);
