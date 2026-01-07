@@ -683,8 +683,15 @@ FResult fGetObjFaceValue(FILE* file, Face* face) {
     }
     index++;
   }
-  face->array = array;
   face->length = index - 1;
+  void* pBuf = (void*)realloc((void*)array, face->length);
+  if (pBuf != NULL) {
+    // if a new pointer is created
+    // in case of inability to store
+    // in same location
+    array = (Uint*)pBuf;
+  }
+  face->array = array;
 }
 
 //-#- .obj file loading
